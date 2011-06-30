@@ -50,5 +50,6 @@ A_global = sparse(A_global);
 
 y_approx = A_global\f_global;  % approximation for y
 
+%testing:
 f_finiteele = 1/h(1) * f_global
 
