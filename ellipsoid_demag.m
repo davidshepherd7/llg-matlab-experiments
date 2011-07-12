@@ -4,6 +4,8 @@ function H_demag = ellipsoid_demag(a, b, M)
 % long axis with radius a, other axes radius b, ellipsoid long axis is
 % assumed to be along the z axis.
 
+% To give H_demag in units of A/m M should be in A/m.
+
 % Calculate de-mag tensor in co ordinates s.t. z-axis is along a
 q = a./b;
 N(3) = 1./(q.^2 - 1).* (q./sqrt(q.^2 - 1)) .* log(q + sqrt(q.^2 - 1) - 1); % forumla from Magnetism, Craik
