@@ -20,13 +20,6 @@ function [T_out,M_out,H_out] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxi
 % K1 are in J/m^3
 % time units (e.g. for h) are femtoseconds
 
-%??????????????????????????????????????????????????????????????????????????
-% Anisotropy needs to go both directions (both types)
-% Finish checking units
-% Ellipsoid demag calcualations wrong?
-%??????????????????????????????????????????????????????????????????????????
-
-
 %==========================================================================
 % Inputs
 %==========================================================================
@@ -35,7 +28,7 @@ function [T_out,M_out,H_out] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxi
 gamma = 0.17e-4 ;% The gyromagnetic ratio - test value that works, equivalent to working in femtoseconds
 %gamma = 1.760859e11; % real value of gamma for electrons, too large for
 %convergence?
-alpha = 0.7;    % The relative strength of damping is propotional to alpha.
+alpha = 0.8;    % The relative strength of damping is propotional to alpha.
 mu0 = 4*pi*1e-7;    % Magnetic permeabillity of vacuum (units: Vs / A(m^2))
 
 % Geometrical properties:
@@ -55,10 +48,6 @@ easyaxis_direction = unit_vec(easyaxis_direction);
 % Calculations
 %==========================================================================
 
-% Calculate crystalline anisotropy effective field
-H_cryst_easyaxis = (2*K1)/(mu0*Ms);      % From Craik, pg 91 (units: A/m)
-H_cryst = H_cryst_easyaxis*easyaxis_direction;
-
 % Initial values for output vectors
 % [Note that M_out and T_out are not of a pre-defined size because their
 % size is dependent on the number of steps used by ode45, which is hard to
@@ -69,9 +58,12 @@ H_out = H_applied;
 
 for i = 1:N
     
-    % Demag and total field (re)calculation
-    % Units for both: A/m
+    % Demag, crystalline anisotropy and total field (re)calculation
+    % Units for all: A/m
+    % Recalculation of cryst is needed to ensure effective field H_cryst is
+    % along the correct axis at all times
     H_demag = ellipsoid_demag(ellipsoid_axis_a, ellipsoid_axis_b, M_out(end,:));
+    H_cryst = crystalline_anisotropy(K1, easyaxis_direction, M_out(end,:), Ms, mu0 );
     H = H_demag + H_cryst + H_applied + H_kick;
     
     H_out = [H_out; H];
@@ -80,7 +72,7 @@ for i = 1:N
     % [transpose taken because ode45 requires a column vector output]
     dMdt = @(t,M) (gamma/(1+alpha^2))*(cross(M,H)...
         - (alpha/Ms)*cross(M,cross(M,H)))';
-
+    
     % Run the ode solver for timestep from h*(i-1) to h*i
     [T_solver,M_solver] = ode45(dMdt,[h*(i-1) h*i], M_out(end,:));
 
