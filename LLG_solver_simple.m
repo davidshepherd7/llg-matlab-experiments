@@ -26,9 +26,11 @@ function [T_out,M_out,H] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxis_di
 %==========================================================================
 
 % Constants:
-gamma = 0.17e-4 ;% The gyromagnetic ratio - test value that works, equivalent to working in femtoseconds
-%gamma = 1.760859e11; % real value of gamma for electrons, too large for
-%convergence?
+%gamma = 0.17e-4 ;% The gyromagnetic ratio - test value that works, equivalent to working in femtoseconds
+%gamma = 1.760859e11 1/Ts; % real value of gamma for electrons, too large for convergence?
+% γ = 2.21e5 m/As from: Application of the stereographic projection to studies of magnetization dynamics described by the Landau–Lifshitz–Gilbert equation, Journal of Physics A: Mathematical and Theoretical
+gamma = 2.21e-4; % in (m/A)*(1/ns), probably more appropriate units than those using Tesla.
+
 alpha = 0.7;    % The relative strength of damping is propotional to alpha.
 mu0 = 4*pi*1e-7;    % Magnetic permeabillity of vacuum (units: Vs / A(m^2))
 
