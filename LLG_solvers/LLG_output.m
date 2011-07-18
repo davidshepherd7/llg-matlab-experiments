@@ -16,6 +16,6 @@ movegui('northeast')
 % also plot each component of H against t
 figure
 hold on
-plot(h*[1:N],H_out)
+plot(1*h:h:T_out(end),H_out)
 legend('Hx','Hy','Hz')
 movegui('southwest')

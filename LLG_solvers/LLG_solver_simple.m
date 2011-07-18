@@ -7,6 +7,9 @@ function [T_out,M_out,H_out] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxi
 % same as the step size used for solution of the ODE which is decided by
 % the built in matlab function ode45.
 
+% H_applied should be a (3xN) matrix containing a list of the values of the
+% applied field at each timestep.
+
 % The magnetisation of the ellipsoid is assumed to always be saturated at
 % Ms (to help with this M0 is normalised to length Ms before starting).
 
@@ -46,18 +49,15 @@ H_out = zeros(N,3);
 M_out = M0;
 T_out = 0;
 
-% Find strength of crystalline anisotropy effective field
-H_cryst_ineasydirection = crystalline_anisotropy(K1, Ms);
-
 for i = 1:N
     % Field (re)calculations:
     % Demag field:
     H_demag = ellipsoid_demag(ellipsoid_axis_a, ellipsoid_axis_b, M_out(end,:));
     % Find correct direction for crystalline anisotropy field using sign of dot
-    % product then multiply by strength of field.
-    H_cryst = H_cryst_ineasydirection*(sign(dot(M_out(end,:),easyaxis_direction)) * easyaxis_direction);
+    % product then multiply by strength of field. [because of choice of units K1 = |H_k|]
+    H_cryst = K1 * (sign(dot(M_out(end,:),easyaxis_direction)) * easyaxis_direction);
     % Add up total field:
-    H_out(i,:) = H_demag + H_cryst + H_applied + H_kick;
+    H_out(i,:) = H_demag + H_cryst + H_applied(i,:) + H_kick;
     H = H_out(i,:);
     
     % (Re)define LLG function with the new value of H:

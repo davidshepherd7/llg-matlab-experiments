@@ -44,7 +44,6 @@ M0 = carttosph(M0,coordsystem); M0(1) = Ms;
 %==========================================================================
 
 % Initialise output vectors:
-
 % M_sph and T_out store data for all times from ode45.
 % M_cart, H_cart, H_sph only store data from between runs of ode45.
 H_cart = zeros(N,3); H_sph = H_cart; M_cart = H_cart;
@@ -52,16 +51,13 @@ M_cart(1,:) = sphtocart(M0,coordsystem);
 M_sph = M0(2:3);
 T_out = 0;
 
-% Find strength of crystalline anisotropy effective field
-H_cryst_ineasydirection = crystalline_anisotropy(K1, Ms);
-
 for i = 1:N
     % Field (re)calculations:
     % Demag field:
     H_demag = ellipsoid_demag(ellipsoid_axis_a, ellipsoid_axis_b, M_cart(end,:));
     % Find correct direction for crystalline anisotropy field using sign of dot
-    % product then multiply by strength of field.
-    H_cryst = H_cryst_ineasydirection*(sign(dot(M_cart(end,:),easyaxis_direction)) * easyaxis_direction);
+    % product then multiply by strength of field. [because of choice of units K1 = |H_k|]
+    H_cryst = K1 *(sign(dot(M_cart(end,:),easyaxis_direction)) * easyaxis_direction);
     % Add up total field:
     H_cart(i,:) = H_demag + H_cryst + H_applied + H_kick;
     
@@ -99,5 +95,3 @@ M_out = zeros(length(M_sph),3);
 for i=1:length(M_sph)
     M_out(i,:) = sphtocart([Ms,M_sph(i,:)],coordsystem);
 end
-
-%M_out = [Ms*ones(length(M_sph),1), M_sph];
