@@ -7,11 +7,15 @@ function [T_out,M_out,H_cart] =  LLG_solver_sph(N,h,M0,H_applied,Ms,K1,easyaxis_
 % same as the step size used for solution of the ODE which is decided by
 % the built in matlab function ode45.
 
+% H_applied should be a (3xN) matrix containing a list of the values of the
+% applied field at each timestep.
+
 % The magnetisation of the ellipsoid is assumed to always be saturated at
 % Ms (to help with this M0 is normalised to length Ms before starting).
 
-% A tiny 'kick' field is added to ensure the magnetisation cannot sit at 
-% an unstable fixed point.
+% A tiny random direction 'kick' field is added to ensure the magnetisation
+% cannot sit at an unstable fixed point. To make more realistic should
+% check temperature dependence.
 
 %==========================================================================
 % Inputs
@@ -29,12 +33,6 @@ alpha = 0.7;    % The relative strength of damping is propotional to alpha.
 % Geometrical properties:
 ellipsoid_axis_a = 2;   % The lengths of the axes of the ellipsoid.
 ellipsoid_axis_b = 1;
-
-% Kick field:
-% Give a tiny 'kick' in all directions to prevent the magnetisation from
-% sitting at a maximum energy. [This could be made more analogous to thermal
-% effects by randomising the direction at each field recalculation step.]
-H_kick = [1 1 1].*1e-6;
 
 % Convert M0 to spherical polars and ensure length = Ms:
 M0 = carttosph(M0,coordsystem); M0(1) = Ms;
@@ -58,6 +56,7 @@ for i = 1:N
     % Find correct direction for crystalline anisotropy field using sign of dot
     % product then multiply by strength of field. [because of choice of units K1 = |H_k|]
     H_cryst = K1 *(sign(dot(M_cart(end,:),easyaxis_direction)) * easyaxis_direction);
+    H_kick = (1e-3)*rand(1,3);
     % Add up total field:
     H_cart(i,:) = H_demag + H_cryst + H_applied + H_kick;
     

@@ -13,27 +13,23 @@ function [T_out,M_out,H_out] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxi
 % The magnetisation of the ellipsoid is assumed to always be saturated at
 % Ms (to help with this M0 is normalised to length Ms before starting).
 
-% A tiny 'kick' field is added to ensure the magnetisation cannot sit at 
-% an unstable fixed point.
+% A tiny random direction 'kick' field is added to ensure the magnetisation
+% cannot sit at an unstable fixed point. To make more realistic should
+% check temperature dependence.
 
 %==========================================================================
 % Inputs
 %==========================================================================
 
 % Constants:
-% γ = 2.21e5 m/As from: Application of the stereographic projection to studies of magnetization dynamics described by the Landau–Lifshitz–Gilbert equation, Journal of Physics A: Mathematical and Theoretical
+% gamma is the electron gyromagnetic ratio 
+% = 2.21e5 m/As Application of the stereographic projection.., JoP A
 gamma = 0.221; % in (m/A)*(1/micro sec)
 alpha = 0.7;    % The relative strength of damping is propotional to alpha.
 
 % Geometrical properties:
 ellipsoid_axis_a = 2;   % The lengths of the axes of the ellipsoid.
 ellipsoid_axis_b = 1;
-
-% Kick field:
-% Give a tiny 'kick' in all directions to prevent the magnetisation from
-% sitting at a maximum energy. [This could be made more analogous to thermal
-% effects by randomising the direction at each field recalculation step.]
-H_kick = [1 1 1].*1e-6;
 
 % Ensure unit vectors where applicable:
 M0 = unit_vec(M0)*Ms;
@@ -56,6 +52,7 @@ for i = 1:N
     % Find correct direction for crystalline anisotropy field using sign of dot
     % product then multiply by strength of field. [because of choice of units K1 = |H_k|]
     H_cryst = K1 * (sign(dot(M_out(end,:),easyaxis_direction)) * easyaxis_direction);
+    H_kick = (1e-3)*rand(1,3);
     % Add up total field:
     H_out(i,:) = H_demag + H_cryst + H_applied(i,:) + H_kick;
     H = H_out(i,:);
