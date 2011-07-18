@@ -1,4 +1,4 @@
-function [T_out,M_out,H] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxis_direction)
+function [T_out,M_out,H_out] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxis_direction)
 % Solve the LLG function for the simple case of a single, uniformly
 % magnetised ellipsoid of rotation with uniaxial crystalline anisotropy.
 
@@ -13,26 +13,14 @@ function [T_out,M_out,H] =  LLG_solver_simple(N,h,M0,H_applied,Ms,K1,easyaxis_di
 % A tiny 'kick' field is added to ensure the magnetisation cannot sit at 
 % an unstable fixed point.
 
-% Using the SI unit system:
-% Units of H_applied are A/m
-% Units of a and b are irrelevant (so long as they are the same)
-% Ms is in A/m
-% K1 is in J/m^3
-% Units of time (e.g. for h, gamma) are femtoseconds
-
-
 %==========================================================================
 % Inputs
 %==========================================================================
 
 % Constants:
-%gamma = 0.17e-4 ;% The gyromagnetic ratio - test value that works, equivalent to working in femtoseconds
-%gamma = 1.760859e11 1/Ts; % real value of gamma for electrons, too large for convergence?
 % γ = 2.21e5 m/As from: Application of the stereographic projection to studies of magnetization dynamics described by the Landau–Lifshitz–Gilbert equation, Journal of Physics A: Mathematical and Theoretical
-gamma = 2.21e-4; % in (m/A)*(1/ns), probably more appropriate units than those using Tesla.
-
+gamma = 0.221; % in (m/A)*(1/micro sec)
 alpha = 0.7;    % The relative strength of damping is propotional to alpha.
-mu0 = 4*pi*1e-7;    % Magnetic permeabillity of vacuum (units: Vs / A(m^2))
 
 % Geometrical properties:
 ellipsoid_axis_a = 2;   % The lengths of the axes of the ellipsoid.
@@ -54,32 +42,42 @@ easyaxis_direction = unit_vec(easyaxis_direction);
 %==========================================================================
 
 % Initialise output vectors:
-% [Note that M_out and T_out are not of a pre-defined size because their
-% size is dependent on the number of steps used by ode45, which is hard to
-% predict.]
+H_out = zeros(N,3); 
 M_out = M0;
 T_out = 0;
-H = zeros(N,3);
+
+% Find strength of crystalline anisotropy effective field
+H_cryst_ineasydirection = crystalline_anisotropy(K1, Ms);
 
 for i = 1:N
     % Field (re)calculations:
-    % Units for all: A/m
-    % [Recalculation of cryst is needed to ensure effective field H_cryst is
-    % along the correct axis at all times.]
+    % Demag field:
     H_demag = ellipsoid_demag(ellipsoid_axis_a, ellipsoid_axis_b, M_out(end,:));
-    H_cryst = crystalline_anisotropy(K1, easyaxis_direction, M_out(end,:), Ms, mu0 );
-    H(i,:) = H_demag + H_cryst + H_applied + H_kick;
+    % Find correct direction for crystalline anisotropy field using sign of dot
+    % product then multiply by strength of field.
+    H_cryst = H_cryst_ineasydirection*(sign(dot(M_out(end,:),easyaxis_direction)) * easyaxis_direction);
+    % Add up total field:
+    H_out(i,:) = H_demag + H_cryst + H_applied + H_kick;
+    H = H_out(i,:);
     
     % (Re)define LLG function with the new value of H:
     % [transpose taken because ode45 requires a column vector output]
-    dMdt = @(t,M) (gamma/(1+alpha^2))*(cross(M,H(i,:))...
-        - (alpha/Ms)*cross(M,cross(M,H(i,:))))';
+    %dMdt = @(t,M) (gamma/(1+alpha^2))*(cross(M,H(i,:))...
+    %   - (alpha/Ms)*cross(M,cross(M,H(i,:))))';
+    % [cross product is main bottleneck of program so done explicitly for increased speed]
+    dMdt = @(t,M) (gamma/(1+alpha^2))*[ ...
+          M(2)*H(3) - M(3)*H(2) - (alpha/Ms)*( M(2)*(M(1)*H(2) - M(2)*H(1)) - M(3)*(M(3)*H(1) - M(1)*H(3))); ...  % dM_x/dt
+          M(3)*H(1) - M(1)*H(3) - (alpha/Ms)*( M(3)*(M(2)*H(3) - M(3)*H(2)) - M(1)*(M(1)*H(2) - M(2)*H(1))); ...  % dM_y/dt
+          M(1)*H(2) - M(2)*H(1) - (alpha/Ms)*( M(1)*(M(3)*H(1) - M(1)*H(3)) - M(2)*(M(2)*H(3) - M(3)*H(2)))];     % dM_z/dt
 
     % Run the ode solver for timestep from h*(i-1) to h*i:
     [T_solver,M_solver] = ode45(dMdt,[h*(i-1) h*i], M_out(end,:));
-
-    % Store results from ode solver for output and next loop:
-    M_out = [M_out; M_solver];
-    T_out = [T_out; T_solver];
-
+    
+    % Normalise M vectors to have length Ms
+    % [Probably can be commented out for smallish number of iterations]
+    M_solver = Ms.*unit_vec(M_solver);
+    
+    % Store all T,M values from ode45:
+    T_out = [T_out;T_solver];
+    M_out = [M_out; M_solver];  
 end
