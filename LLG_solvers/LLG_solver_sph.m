@@ -21,9 +21,6 @@ function [T_out,M_out,H_cart] =  LLG_solver_sph(N,h,M0,H_applied,Ms,K1,easyaxis_
 % Inputs
 %==========================================================================
 
-% Choice of spherical polar system (for conversions)
-coordsystem = 'elevation';
-
 % Constants:
 % gamma is the electron gyromagnetic ratio 
 % = 2.21e5 m/As Application of the stereographic projection.., JoP A
@@ -35,7 +32,7 @@ ellipsoid_axis_a = 2;   % The lengths of the axes of the ellipsoid.
 ellipsoid_axis_b = 1;
 
 % Convert M0 to spherical polars and ensure length = Ms:
-M0 = carttosph(M0,coordsystem); M0(1) = Ms;
+M0 = carttosph(M0); M0(1) = Ms;
 
 %==========================================================================
 % Calculations
@@ -45,7 +42,7 @@ M0 = carttosph(M0,coordsystem); M0(1) = Ms;
 % M_sph and T_out store data for all times from ode45.
 % M_cart, H_cart, H_sph only store data from between runs of ode45.
 H_cart = zeros(N,3); H_sph = H_cart; M_cart = H_cart;
-M_cart(1,:) = sphtocart(M0,coordsystem);
+M_cart(1,:) = sphtocart(M0);
 M_sph = M0(2:3);
 T_out = 0;
 
@@ -61,7 +58,7 @@ for i = 1:N
     H_cart(i,:) = H_demag + H_cryst + H_applied + H_kick;
     
     % Convert field to spherical polars ready for time stepping
-    H_sph(i,:) = carttosph(H_cart(i,:),coordsystem);
+    H_sph(i,:) = carttosph(H_cart(i,:));
     
     % (Re)define LLG function with the new value of H:
     % For this section (only) M(1) = theta, M(2) = phi since no
@@ -69,7 +66,7 @@ for i = 1:N
     dMdt = @(t,M) (-gamma/(1+alpha^2)) *[ ...   %pre-factor
         ... %d(theta)/dt component:
         alpha*( H_cart(i,1)*cos(M(1))*cos(M(2)) + H_cart(i,2)*cos(M(1))*sin(M(2)) - H_cart(i,3)*sin(M(1))) ... % alpha* (H in theta direction)
-        + (cos(M(2)*H_cart(i,2)) -sin(M(2))*H_cart(i,1))  ... % H in phi direction
+        + (cos(M(2)*H_cart(i,2)) - sin(M(2))*H_cart(i,1))  ... % H in phi direction
         ; ...
         ... % d(phi)/dt component:
         (1/limited_sin(M(1))) * ( ...         % pre-factor for this component only
@@ -85,12 +82,12 @@ for i = 1:N
     T_out = [T_out; T_solver];
     
     % Convert most recent M to cartesian coordinates ready for field calculations
-    M_cart(i+1,:) = sphtocart([Ms, M_sph(end,:)],coordsystem);
+    M_cart(i+1,:) = sphtocart([Ms, M_sph(end,:)]);
     
 end
 
-% Convert M_sph to cartesian co ordinates for consistency with other solver
+% Convert output to cartesian co ordinates for consistency with other solver
 M_out = zeros(length(M_sph),3);
 for i=1:length(M_sph)
-    M_out(i,:) = sphtocart([Ms,M_sph(i,:)],coordsystem);
+    M_out(i,:) = sphtocart([Ms,M_sph(i,:)]);
 end
