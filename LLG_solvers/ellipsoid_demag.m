@@ -13,4 +13,4 @@ N(3) = 1./(q.^2 - 1).* (q./sqrt(q.^2 - 1)) .* log(q + sqrt(q.^2 - 1) - 1); % for
 N(2) = (1 - N(3))/2;
 N(1) = N(2);
 
-H_demag = -dot(N,M);
+H_demag = -N.*M;
