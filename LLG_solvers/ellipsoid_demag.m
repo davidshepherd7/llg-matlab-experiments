@@ -8,8 +8,9 @@ function H_demag = ellipsoid_demag(a, b, M)
 
 % Calculate de-mag tensor (in co ordinates s.t. z-axis is along a)
 q = a./b;
+N = zeros(1,3);
 N(3) = 1./(q.^2 - 1).* (q./sqrt(q.^2 - 1)) .* log(q + sqrt(q.^2 - 1) - 1); % forumla from Magnetism, Craik
 N(2) = (1 - N(3))/2;
 N(1) = N(2);
 
-H_demag = -N.*M;
+H_demag = -dot(N,M);
