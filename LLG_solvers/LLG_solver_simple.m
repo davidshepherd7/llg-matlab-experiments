@@ -17,7 +17,6 @@ function [T_out,M_out,H_out] =  LLG_solver_simple(T,M0,H_applied,Ms,K1,easyaxis_
 % gamma is the electron gyromagnetic ratio 
 % = 2.21e5 m/As Application of the stereographic projection.., JoP A
 gamma = 0.221; % in (m/A)*(1/micro sec)
-%alpha = 0.7;    % The relative strength of damping is propotional to alpha.
 
 % Geometrical properties:
 ellipsoid_axis_a = 2;   % The lengths of the axes of the ellipsoid.
@@ -59,10 +58,10 @@ easyaxis_direction = unit_vec(easyaxis_direction);
 %==========================================================================
 % Calculations
 %==========================================================================
-tic
+
 % Run the ode solver
 [T_out,M_out] = ode45(@LLG_eqn_nested,[0 T], M0);
-toc
+
 % ??: M vectors are NOT normalised, not sure how to implement this.
 
 % If H_out is requested calculate H values for each (M,t) from ode solver.

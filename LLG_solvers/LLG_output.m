@@ -14,7 +14,24 @@ movegui('northeast')
 
 % also plot each component of H against t
 figure
-hold on
 plot(T_out,H_out)
 legend('Hx','Hy','Hz')
 movegui('southeast')
+
+% plot a hystersis loop if H_applied is non-constant
+if max(abs(H_applied(0) - H_applied(T/2 - 5))) > 0.0000001
+    
+    H_applied_values = zeros(length(T_out),3);  % calculate values of applied field
+    for i=1:length(T_out)
+        H_applied_values(i,:) = H_applied(T_out(i));
+    end
+    
+    % plot z magnetisation against z applied field
+    figure
+    plot(H_applied_values(:,3),M_out(:,3))
+    xlabel('z-applied field')
+    ylabel('z-magnetisation')
+    movegui('south')
+    
+end
+    
