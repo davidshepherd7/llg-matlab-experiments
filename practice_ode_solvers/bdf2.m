@@ -1,45 +1,51 @@
-function [Y, t] = bdf2(fcn, y0, h, N_steps)
-% Solve the ODE Y'(t) = fcn(t,Y) using the BDF2 method. Initial value is
+function [T_out, Y_out] = bdf2(odefun,tspan, y0, h)
+% Solve the ODE Y'(t) = odefun(t,Y) using the BDF2 method. Initial value is
 % calculated by ??. y_n+1 is calculated from the implicit formula at each
 % step by fixed point iteration with the inital guess given by forward
 % Euler.
 
 % Issues:
 % Stability seems to be limited by the fixed point iterations.
-% RK method takes input function which is the transpose of my set up so
-% needs a (wasteful) transpose to fix it
+% Should use more accurate method for first step?
+% Should use Newton method to solve for y_n+1?
 
+% Create function to solve for BDF2 timestep
+bdf2_stepfun = @(t,yn,ynm1,ynp1) ( (2*h/3)*feval(odefun, t, ynp1) + (4/3)*yn - (1/3)*ynm1 );
 
 % Initialise
-t = 0:h:h*(N_steps-1);
+T_out = tspan(1):h:tspan(2);
 N_eqns = length(y0);
-Y = zeros(N_steps,N_eqns);
-implicit_y_accuracy = 0.005;
+Y_out = zeros(length(T_out),N_eqns);
+Y_out(1,:) = y0;
 
-Y(1,:) = y0;
-% Calculate second "initial value" using RK4 (built in - cheating a bit)
-[unused Y2] = ode45(fcn, [0 h], y0);
-Y(2,:) = Y2(end,:);
+% Calculate second value of y using forward Euler (bdf2 requires known
+% values at 2 previous timesteps).
+Y_out(2,:) = Y_out(1,:) + h*feval(odefun, T_out(2), Y_out(1,:));
 
-% Time stepping:
-for i= 3:N_steps
-    
-    % Have y_n+1 implicitly so we need to solve for it:
-    Y_temp = Y(i-1,:) + h*feval(fcn, t(i), Y(i-1,:))'; % use forward euler to get initial guess
-    diff = 10*implicit_y_accuracy;   % ensure while loop is never accurate enough on first try
-    j = 0;  % avoid infinite loops by counting number of iterations
-    
-    while (diff > implicit_y_accuracy)&&(j<10)
-        Y_temp_prev = Y_temp;
-        Y_temp = (2*h/3)*feval(fcn, t(i), Y_temp) + (4/3)*Y(i-1,:) - (1/3)*Y(i-2,:);    %BDF2 formula
-        diff = max( abs(Y_temp(:) - Y_temp_prev(:)) );  % Measurement of change between steps
-        j = j+1;
+for i= 3:length(T_out)
+    % Solve the timesteping equation using a rootfinder
+    Y_out(i,:) = simplerootfinder(bdf2_stepfun,h,T_out(i),Y_out(i-1,:),Y_out(i-2,:));
+end
+
+
+    function Y = simplerootfinder(stepfun,h,t,yn,ynm1)
+        implicit_y_accuracy = 0.005;
+        Y = yn + h*feval(odefun, t, yn); % use forward euler to get initial guess
+        
+        % Main while loop to solve for ynp1
+        diff = 10*implicit_y_accuracy;   % ensure while loop is never accurate enough on first try
+        j = 0;  % avoid infinite loops by counting number of iterations
+        while (diff > implicit_y_accuracy)&&(j<10)
+            Y_prev = Y;
+            Y = feval(stepfun,t,yn,ynm1,Y);   % Find the next iteration
+            diff = max( abs(Y(:) - Y_prev(:)) );    % Measure the change between steps.
+            j = j+1;
+        end
+        
+        % Give a warning if Y did not converge well enough
+        if j>=10; warning('backward_euler:NCY',['The value of Y for t = ', ...
+                num2str(t), ' did not converge to the required accuracy in 10 or less steps']); end
+        
     end
-    
-    % Give a warning if Y did not converge
-    if j>=10; warning('backward_euler:NCY','A value of Y did not converge in 10 or less steps'); end
-    
-    % Put into solution vector
-    Y(i,:) = Y_temp;
-    
+
 end
