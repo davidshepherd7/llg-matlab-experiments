@@ -1,4 +1,4 @@
-function [T_out,M_out,H_out] =  LLG_solver_simple(T,M0,H_applied,Ms,K1,easyaxis_direction,alpha)
+function [T_out,M_out,H_out] =  LLG_solver_bdf2(T,M0,H_applied,Ms,K1,easyaxis_direction,alpha,h)
 % Solve the LLG function for the simple case of a single, uniformly
 % magnetised ellipsoid of rotation with uniaxial crystalline anisotropy.
 
@@ -9,13 +9,22 @@ function [T_out,M_out,H_out] =  LLG_solver_simple(T,M0,H_applied,Ms,K1,easyaxis_
 % cannot sit at an unstable fixed point. To make more realistic should
 % check temperature dependence.
 
+% List of differences from LLG_solver_simple:
+% - Have to specify h (for now) since my solver is not adaptive.
+% - Can work entirely in row vectors; ode45 only accepts column vectors but
+% outputs rows!
+
 %==========================================================================
 % Inputs
 %==========================================================================
 
+% Need effective field as global since needed all over the place (still not
+% happy with this)
+global H;
+
 % Constants:
 % gamma is the electron gyromagnetic ratio 
-% = 2.21e5 m/As Application of the stereographic projection.., JoP A
+% = 2.21e5 m/As - Application of the stereographic projection.., JoP A
 gamma = 0.221; % in (m/A)*(1/micro sec)
 
 % Geometrical properties:
@@ -25,6 +34,10 @@ ellipsoid_axis_b = 1;
 % Ensure vectors are unit vectors where applicable:
 M0 = unit_vec(M0)*Ms;
 easyaxis_direction = unit_vec(easyaxis_direction);
+
+% Load jacobian function from file and subs in values of constants
+
+jacobian = @(t,M) jacobian_bdf2_LLG(H,Ms,M,alpha,gamma);
 
 %==========================================================================
 % Nested functions
@@ -42,16 +55,16 @@ easyaxis_direction = unit_vec(easyaxis_direction);
     end
 
 % function to compute dMdt
-    function [dMdt] = LLG_eqn_nested(t,M)
+    function [dMdt H] = LLG_eqn_nested(t,M)
         % First calculate H-fields:
-        H = H_eff_calc(t,M);
+        H = H_eff_calc(t,M');
         
         % Now calculate dMdt using LLG function with the value of H just calculated:
         % [cross product is main bottleneck of program so done explicitly
         % for increased speed]
         dMdt = (gamma/(Ms*(1+alpha^2)))*[ ...
-            M(2)*H(3) - M(3)*H(2) - (alpha/Ms)*( M(2)*(M(1)*H(2) - M(2)*H(1)) - M(3)*(M(3)*H(1) - M(1)*H(3))); ...  % dM_x/dt
-            M(3)*H(1) - M(1)*H(3) - (alpha/Ms)*( M(3)*(M(2)*H(3) - M(3)*H(2)) - M(1)*(M(1)*H(2) - M(2)*H(1))); ...  % dM_y/dt
+            M(2)*H(3) - M(3)*H(2) - (alpha/Ms)*( M(2)*(M(1)*H(2) - M(2)*H(1)) - M(3)*(M(3)*H(1) - M(1)*H(3))), ...  % dM_x/dt
+            M(3)*H(1) - M(1)*H(3) - (alpha/Ms)*( M(3)*(M(2)*H(3) - M(3)*H(2)) - M(1)*(M(1)*H(2) - M(2)*H(1))), ...  % dM_y/dt
             M(1)*H(2) - M(2)*H(1) - (alpha/Ms)*( M(1)*(M(3)*H(1) - M(1)*H(3)) - M(2)*(M(2)*H(3) - M(3)*H(2)))];     % dM_z/dt
     end
 
@@ -60,7 +73,7 @@ easyaxis_direction = unit_vec(easyaxis_direction);
 %==========================================================================
 
 % Run the ode solver
-[T_out,M_out] = ode45(@LLG_eqn_nested,[0 T], M0);
+[T_out,M_out] = bdf2(@LLG_eqn_nested,[0 T], M0, h, jacobian);
 
 % ??: M vectors are NOT normalised, not sure how to implement this.
 

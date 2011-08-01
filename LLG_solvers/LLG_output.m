@@ -1,5 +1,7 @@
 % Output script for the various LLG_solvers
 
+set(0,'DefaultAxesFontSize',15)
+
 % plot line showing path of M (parameterised by t)
 figure
 plot3(M_out(:,1),M_out(:,2),M_out(:,3),0,0,0,'o',M_out(1,1),M_out(1,2),M_out(1,3),'x')
@@ -34,4 +36,6 @@ if max(abs(H_applied(0) - H_applied(T/2 - 5))) > 0.0000001
     movegui('south')
     
 end
+
+set(0,'DefaultAxesFontSize','factory')
     

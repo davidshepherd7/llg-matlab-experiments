@@ -10,6 +10,8 @@ function magavi(T_out,M_out,start,finish,filename)
 
 % Problem: have to manually find the "interesting" part.
 
+set(0,'DefaultAxesFontSize',15) % Set larger font size.
+
 clear video_frames
 figure
 
@@ -38,4 +40,8 @@ eval(compress_command);
 % Remove original (very large) file (system command)
 rm_command = ['!rm "', filename, '.avi"'];
 eval(rm_command);
+
+
+set(0,'DefaultAxesFontSize','factory') % Reset default font size
 end
+
