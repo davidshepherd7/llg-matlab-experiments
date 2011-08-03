@@ -5,11 +5,14 @@ function [T_out, Y_out] = bdf2(odefun,tspan, y0, h, jacobian)
 % Euler.
 
 % Issues:
-% Stability seems to be limited by the fixed point iterations.
-% Should use more accurate method for first step?
-% Should use Newton method to solve for y_n+1?
+% Should use more accurate method for first step? - Trapezodial method or
+% bdf1
+
+% Open file to save data to (w=in write mode, +=wipe existing, t=text)
+fileID = fopen('~/programming/dsmatlabtests/bdf2diagnostics','w+t');
 
 % Create function to solve for BDF2 timestep
+% bad??
 bdf2_stepfun = @(t,yn,ynm1,ynp1) ( (2*h/3)*feval(odefun, t, ynp1) + (4/3)*yn - (1/3)*ynm1 );
 bdf2_residual = @(t,yn,ynm1,ynp1) ( ynp1 - bdf2_stepfun(t,yn,ynm1,ynp1));
 
@@ -24,7 +27,7 @@ Y_out(1,:) = y0;
 Y_out(2,:) = Y_out(1,:) + h*feval(odefun, T_out(2), Y_out(1,:));
 
 for i= 3:length(T_out)
-    % Solve the timesteping equation using a rootfinder
+    % Solve the implicit timesteping equation using a rootfinder
     %Y_out(i,:) = simplerootfinder(bdf2_stepfun,h,T_out(i),Y_out(i-1,:),Y_out(i-2,:));
     Y_out(i,:) = newtonrootfinder(bdf2_residual,jacobian,h,T_out(i),Y_out(i-1,:),Y_out(i-2,:));
 end
@@ -54,8 +57,8 @@ end
         % Solve the implicit function Y = residual(t,Y,yn,ynm1) for Y using
         % Newton's method.
         
-        implicit_y_accuracy = 0.005;
-        Y = yn + h*feval(odefun, t, yn); % use forward Euler to get initial guess
+        implicit_y_accuracy = 1e-5;
+        Y = yn; % use previous step as initial guess
         
         % Main while loop to solve for new value of Y
         deltaY = 10*implicit_y_accuracy;
@@ -63,6 +66,9 @@ end
         while (max(abs(deltaY)) > implicit_y_accuracy)&&(k<10)
             r = feval(residual,t,yn,ynm1,Y)';   %Evaluate residual and pass out H_eff
             J = feval(jacobian,t,Y);      % Evaluate jacobian with H_eff
+            
+            % Output data to file of fileID
+            fprintf(fileID,'%d,%0.2e,%d,%0.2e\n',i,h,k,norm(r,2));
             
             deltaY = J\(-1*r);
             Y = Y + deltaY';
